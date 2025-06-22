@@ -2,10 +2,10 @@
 # Script to assess all images in data/TONO/release and write results to a CSV file using OFIQSampleApp
 
 # Set paths
-OFIQ_APP="/home/olabl/repos/biometric-systems/OFIQ-Project/build/build_linux/OFIQSampleApp"
-CONFIG_DIR="/home/olabl/repos/biometric-systems/OFIQ-Project/data"
-IMAGE_DIR="/home/olabl/repos/biometric-systems/src/data/TONO/release"
-OUTPUT_CSV="/home/olabl/repos/biometric-systems/tono_assessment.csv"
+OFIQ_APP="../../OFIQ-Project/install_x86_64_linux/Release/bin/OFIQSampleApp"
+CONFIG_DIR="../../OFIQ-Project/data"
+IMAGE_DIR="../../src/data/TONO/release"
+OUTPUT_CSV="../../tono_assessment.csv"
 TMP_IMAGE_LIST="/tmp/tono_image_list.txt"
 
 # Check if OFIQSampleApp exists
