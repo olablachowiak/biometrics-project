@@ -1,10 +1,14 @@
-contrast_components = {"bkg", "cap", "ce", "expos", "la_1", "la_2", "light", "mkup", "oof", "pixel", "sat", "sm", "sun", "tq", "zoom"}
+import pandas as pd
 
 def generate_description(contrast_element):
     """
     Given a single contrast element, return a description for in-context learning.
     """
-    problem = "The image is not compliant for biometric use. The primary defect is: "
+
+    # Handle None, NaN, and string 'none'
+    if contrast_element is None or pd.isna(contrast_element) or str(contrast_element).lower() == "none":
+        return "The image is compliant for biometric use. No defects detected."
+    
     descriptions = {
         "bkg": "Background is not uniform. Please ensure a clean and consistent background.",
         "cap": "Subject is wearing a head covering such as a hat, cap, bandana, bowler, or tifler. Please ensure the subject's head is uncovered.",
@@ -24,4 +28,4 @@ def generate_description(contrast_element):
         "zoom": "Subject's face is being cropped or zoomed in too much. Please ensure the subject's face is fully visible in the frame and the image has correct margins."
     }
     desc = descriptions.get(contrast_element, "Unknown or unclassified image problem.")
-    return problem + desc
+    return "The image is not compliant for biometric use. The primary defect is: "+ desc
