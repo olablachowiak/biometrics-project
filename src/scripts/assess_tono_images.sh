@@ -5,7 +5,7 @@
 OFIQ_APP="../../OFIQ-Project/install_x86_64_linux/Release/bin/OFIQSampleApp"
 CONFIG_DIR="../../OFIQ-Project/data"
 IMAGE_DIR="../../src/data/TONO/release"
-OUTPUT_CSV="../../tono_assessment.csv"
+OUTPUT_CSV="../../src/data/QFIQ_assessment/tono_assessment.csv"
 TMP_IMAGE_LIST="/tmp/tono_image_list.txt"
 
 # Check if OFIQSampleApp exists

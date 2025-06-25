@@ -5,7 +5,7 @@
 OFIQ_APP="../../OFIQ-Project/install_x86_64_linux/Release/bin/OFIQSampleApp"
 CONFIG_DIR="../../OFIQ-Project/data"
 IMAGE_DIR="../../src/data/ONOT/S115379105"
-OUTPUT_CSV="../../onot_assessment.csv"
+OUTPUT_CSV="../../src/data/QFIQ_assessment/onot_assessment.csv"
 TMP_IMAGE_LIST="/tmp/onot_image_list.txt"
 
 # Check if OFIQSampleApp exists
