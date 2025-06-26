@@ -4,15 +4,15 @@ import requests
 import os
 
 # --- Configuration ---
-OFIQ_RESULTS_FILE = "data/QFIQ_assessment/tono_onot_assessment_combined.jsonl"
-ICL_EXAMPLES_FILE = "data/QFIQ_assessment/incontext_test_data.jsonl" 
+IN_CONTEXT_TEST_FILE = "data/QFIQ_assessment/in_context_test_data.jsonl"
+IN_CONTEXT_TRAIN_FILE = "data/QFIQ_assessment/in_context_train_data.jsonl" 
 OUTPUT_LLM_EXPLANATIONS_FILE = "llm_generated_explanations.jsonl" # Output for LLM results
 
 OLLAMA_API_URL = "http://localhost:11434/api/generate" # Default Ollama API endpoint
 OLLAMA_MODEL_NAME = "llama3.2" # The name of the model you pulled with Ollama
 
 # --- LLM System Prompt and Instruction (Common across all calls) ---
-SYSTEM_PROMPT = """You are an AI assistant specialized in explaining face image quality defects for biometric compliance, based on OFIQ scores. Your task is to analyze the provided OFIQ scores for a face image and clearly state if the image can be accepted as a biometric or not. If not, explain any defects that need to be fixed for compliance, using the relevant OFIQ terminology.
+SYSTEM_PROMPT = """You are an AI assistant specialized in explaining face image quality defects for biometric compliance, based on OFIQ scores. Your task is to analyze the provided OFIQ scores for a face image and clearly state for the person who took the photo if the image can be accepted as a biometric or not. If not, explain any defects that need to be fixed for compliance. Note that while higher scores generally indicate better quality, some metrics may have an optimal range or an inverse interpretation for extreme values (e.g., 0 or 100).
 
 Your explanations must:
 - State if the image is compliant or not compliant.
@@ -31,10 +31,10 @@ def load_data(filepath):
                 data.append(json.loads(line.strip()))
     return data
 
-def create_icl_prompt_section(icl_examples):
+def create_icl_prompt_section(in_context_train):
     """Creates the in-context learning examples string for the prompt."""
     icl_section = ""
-    for i, example in enumerate(icl_examples):
+    for i, example in enumerate(in_context_train):
         icl_section += f"OFIQ Scores: {json.dumps(example['OFIQResults'])}\n"
         icl_section += f"Correct Description: {example['Description']}\n\n"
     return icl_section
@@ -62,32 +62,19 @@ def call_ollama(prompt):
 
 def main():
     print("Loading in-context learning examples...")
-    icl_examples = load_data(ICL_EXAMPLES_FILE)
-    if not icl_examples:
-        print(f"Error: No ICL examples found in {ICL_EXAMPLES_FILE}. Please create this file with your curated examples.")
-        print("Each line should be a JSON object like: {\"Filename\": \"...\", \"OFIQResults\": {...}, \"correct_description\": \"...\"}")
+    in_context_train = load_data(IN_CONTEXT_TRAIN_FILE)
+    if not in_context_train:
+        print(f"Error: No ICL examples found in {IN_CONTEXT_TRAIN_FILE}. Please create this file with your curated examples.")
         return
+    print(f"Loaded {len(in_context_train)} train examples.")
+    
+    print("Loading test data...")
+    test_set_images = load_data(IN_CONTEXT_TEST_FILE)
+    print(f"Identified {len(test_set_images)} images for the test set.")
 
-    print("Loading all OFIQ results for test set selection...")
-    all_ofiqa_results = random.sample(load_data(OFIQ_RESULTS_FILE), 10)  # Load a sample of 1000 results for testing
-
-    # --- Prepare your Test Set ---
-    # IMPORTANT: Filter out images used in ICL_EXAMPLES_FILE to create your test set.
-    # The test set should contain images that the LLM has NOT seen in the examples.
-    icl_Filenames = {example['Filename'] for example in icl_examples}
-    test_set_images = [
-        item for item in all_ofiqa_results if item['Filename'] not in icl_Filenames
-    ]
-
-    print(f"Loaded {len(icl_examples)} ICL examples.")
-    print(f"Identified {len(test_set_images)} images for the test set (excluding ICL examples).")
-
-    if not test_set_images:
-        print("Warning: Test set is empty. No new images to generate explanations for.")
-        return
 
     # Create the ICL examples section for the prompt once
-    icl_prompt_section = create_icl_prompt_section(icl_examples)
+    icl_prompt_section = create_icl_prompt_section(in_context_train)
 
     print(f"Starting LLM explanation generation for {len(test_set_images)} images...")
 
@@ -102,7 +89,8 @@ def main():
             current_image_prompt = (
                 f"{SYSTEM_PROMPT}\n\n"
                 f"{icl_prompt_section}"
-                f"Now, explain if the biometrics can be accepted, if not then explain the primary defect for this image and provide actions to be taken:\n"
+                f"Now, explain if the biometrics is compliant. Your response should always start with an overall compliance assessment. Then, detail any specific defects, referencing the relevant OFIQ scalar scores. Conclude with clear, actionable recommendations for improvement.\n\n"
+                f"Filename: {Filename}\n"
                 f"OFIQ Scores: {json.dumps(OFIQResults)}\n"
                 f"Explanation:"
             )
