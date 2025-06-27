@@ -6,12 +6,9 @@ import os
 # --- Configuration ---
 IN_CONTEXT_TEST_FILE = "data/QFIQ_assessment/in_context_test_data.jsonl"
 IN_CONTEXT_TRAIN_FILE = "data/QFIQ_assessment/in_context_train_data.jsonl" 
-OUTPUT_LLM_EXPLANATIONS_FILE = "llm_generated_explanations.jsonl" # Output for LLM results
-
+OUTPUT_LLM_EXPLANATIONS_FILE = "data/llm_descriptions/llm_generated_explanations.jsonl" # Output for LLM results
 OLLAMA_API_URL = "http://localhost:11434/api/generate" # Default Ollama API endpoint
-OLLAMA_MODEL_NAME = "llama3.2" # The name of the model you pulled with Ollama
-
-# --- LLM System Prompt and Instruction (Common across all calls) ---
+OLLAMA_MODEL_NAME = "llama3.2"
 SYSTEM_PROMPT = """You are an AI assistant specialized in explaining face image quality defects for biometric compliance, based on OFIQ scores. Your task is to analyze the provided OFIQ scores for a face image and clearly state for the person who took the photo if the image can be accepted as a biometric or not. If not, explain any defects that need to be fixed for compliance. Note that while higher scores generally indicate better quality, some metrics may have an optimal range or an inverse interpretation for extreme values (e.g., 0 or 100).
 
 Your explanations must:
@@ -54,13 +51,13 @@ def call_ollama(prompt):
     }
     try:
         response = requests.post(OLLAMA_API_URL, headers=headers, json=payload)
-        response.raise_for_status() # Raise an HTTPError for bad responses (4xx or 5xx)
+        response.raise_for_status() # Raise an HTTPError for bad responses
         return response.json()["response"]
     except requests.exceptions.RequestException as e:
         print(f"Error calling Ollama API: {e}")
         return None
 
-def main():
+def generate_LLM_descriptions():
     print("Loading in-context learning examples...")
     in_context_train = load_data(IN_CONTEXT_TRAIN_FILE)
     if not in_context_train:
@@ -73,11 +70,9 @@ def main():
     print(f"Identified {len(test_set_images)} images for the test set.")
 
 
-    # Create the ICL examples section for the prompt once
     icl_prompt_section = create_icl_prompt_section(in_context_train)
 
     print(f"Starting LLM explanation generation for {len(test_set_images)} images...")
-
     generated_explanations = []
     with open(OUTPUT_LLM_EXPLANATIONS_FILE, 'w') as outfile:
         for i, item in enumerate(test_set_images):
@@ -112,6 +107,3 @@ def main():
 
     print(f"\nLLM explanation generation complete. Results saved to {OUTPUT_LLM_EXPLANATIONS_FILE}")
     print(f"Successfully generated explanations for {len(generated_explanations)} images.")
-
-if __name__ == "__main__":
-    main()
