@@ -9,14 +9,12 @@ IN_CONTEXT_TRAIN_FILE = "data/QFIQ_assessment/in_context_train_data.jsonl"
 OUTPUT_LLM_EXPLANATIONS_FILE = "data/llm_descriptions/llm_generated_explanations.jsonl" # Output for LLM results
 OLLAMA_API_URL = "http://localhost:11434/api/generate" # Default Ollama API endpoint
 OLLAMA_MODEL_NAME = "llama3.2"
-SYSTEM_PROMPT = """You are an AI assistant specialized in explaining face image quality defects for biometric compliance, based on OFIQ scores. Your task is to analyze the provided OFIQ scores for a face image and clearly state for the person who took the photo if the image can be accepted as a biometric or not. If not, explain any defects that need to be fixed for compliance. Note that while higher scores generally indicate better quality, some metrics may have an optimal range or an inverse interpretation for extreme values (e.g., 0 or 100).
-
-Your explanations must:
-- State if the image is compliant or not compliant.
-- Point out one defect that must be fixed for compliance, if not compliant.
-- Action, suggesting what needs to be improved, if relevant.
-- Be in a professional and helpful tone.
-- Referencing OFIQ components by their names (e.g., illumination, sharpness, head pose, eyes open, utility score).
+SYSTEM_PROMPT = """You are an AI assistant specialized in explaining face image quality defects for biometric compliance, based on OFIQ ( Open Source Face Image Quality) assessment.
+ Your primary task is to identify and clearly explain the single most significant defect detected in a face image, based on its OFIQ scalar scores. There might be images that don't have any defects, in which case you should state that the image is compliant for biometric use.
+   Your explanation must always reference the relevant OFIQ scalar values and provide clear, actionable feedback for change.
+   Always start with stating if the image is compliant or not compliant. If not, state the main defect by referencing the contrast element.
+    Note that the scalar range is from 0 to 100. While higher scores generally indicate better quality, some metrics may have an optimal range or an inverse interpretation for extreme values (e.g., 0 or 100) ex. HeadSize.scalar.
+    Your response should follow the structure demonstrated in the examples, focusing on one primary defect per image explanation.
 """
 
 def load_data(filepath):
@@ -34,6 +32,7 @@ def create_icl_prompt_section(in_context_train):
     for i, example in enumerate(in_context_train):
         icl_section += f"OFIQ Scores: {json.dumps(example['OFIQResults'])}\n"
         icl_section += f"Correct Description: {example['Description']}\n\n"
+        icl_section += f"Key Defect: {example['ContrastElement']}\n"
     return icl_section
 
 def call_ollama(prompt):
@@ -78,13 +77,13 @@ def generate_LLM_descriptions():
         for i, item in enumerate(test_set_images):
             Filename = item["Filename"]
             OFIQResults = item["OFIQResults"]
-            ContrastElement = item['ContrastElement'] if 'ContrastElement' in item else "none"
+            ContrastElement = item['ContrastElement']
 
             # Construct the full prompt for the current image
             current_image_prompt = (
                 f"{SYSTEM_PROMPT}\n\n"
                 f"{icl_prompt_section}"
-                f"Now, explain if the biometrics is compliant. Your response should always start with an overall compliance assessment. Then, detail any specific defects, referencing the relevant OFIQ scalar scores. Conclude with clear, actionable recommendations for improvement.\n\n"
+                f"Now, explain if the biometrics is compliant. Your response should always start with an overall compliance assessment. Then, detail any specific defects, referencing the relevant OFIQ scalar scores. Conclude with clear, actionable recommendations for improvement. Keep it short and concise\n\n"
                 f"Filename: {Filename}\n"
                 f"OFIQ Scores: {json.dumps(OFIQResults)}\n"
                 f"Explanation:"
@@ -107,3 +106,6 @@ def generate_LLM_descriptions():
 
     print(f"\nLLM explanation generation complete. Results saved to {OUTPUT_LLM_EXPLANATIONS_FILE}")
     print(f"Successfully generated explanations for {len(generated_explanations)} images.")
+
+if __name__ == "__main__":
+    generate_LLM_descriptions()
