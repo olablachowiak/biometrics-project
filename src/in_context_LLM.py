@@ -5,17 +5,16 @@ import os
 
 # --- Configuration ---
 IN_CONTEXT_TEST_FILE = "data/QFIQ_assessment/in_context_test_data.jsonl"
-IN_CONTEXT_TRAIN_FILE = "data/QFIQ_assessment/in_context_train_data.jsonl" 
+IN_CONTEXT_TRAIN_FILE = "data/QFIQ_assessment/in_context_train1.jsonl"
 OUTPUT_LLM_EXPLANATIONS_FILE = "data/llm_descriptions/llm_generated_explanations.jsonl" # Output for LLM results
 OLLAMA_API_URL = "http://localhost:11434/api/generate" # Default Ollama API endpoint
 OLLAMA_MODEL_NAME = "llama3.2"
-SYSTEM_PROMPT = """You are an AI assistant specialized in explaining face image quality defects for biometric compliance, based on OFIQ ( Open Source Face Image Quality) assessment.
- Your primary task is to identify and clearly explain the single most significant defect detected in a face image, based on its OFIQ scalar scores. There might be images that don't have any defects, in which case you should state that the image is compliant for biometric use.
-   Your explanation must always reference the relevant OFIQ scalar values and provide clear, actionable feedback for change.
-   Always start with stating if the image is compliant or not compliant. If not, state the main defect by referencing the contrast element.
-    Note that the scalar range is from 0 to 100. While higher scores generally indicate better quality, some metrics may have an optimal range or an inverse interpretation for extreme values (e.g., 0 or 100) ex. HeadSize.scalar.
-    Your response should follow the structure demonstrated in the examples, focusing on one primary defect per image explanation.
-"""
+SYSTEM_PROMPT = """You are an AI assistant specialized in explaining face image quality defects based on OFIQ (Open Source Face Image Quality) assessment.
+For each image, carefully review all OFIQ scores and select defect specific to that image. Do not assume the same defect for all images; each image may have a different primary defect.
+One defect might be a combination of multiple OFIQ scores.
+Always start by stating if the image is compliant or not. Then provide a concise desription of the defect and actionable feedback for improvement.
+If no significant defects are identified, state that the image is fully compliant and no specific defects were found.
+Your response should be concise, professional, and easy to understand. Each image has at maximum one main defect."""
 
 def load_data(filepath):
     """Loads JSON Lines data from a file."""
@@ -31,8 +30,8 @@ def create_icl_prompt_section(in_context_train):
     icl_section = ""
     for i, example in enumerate(in_context_train):
         icl_section += f"OFIQ Scores: {json.dumps(example['OFIQResults'])}\n"
+        icl_section += f"Primary Defect Type: {example['ContrastElement']}\n"
         icl_section += f"Correct Description: {example['Description']}\n\n"
-        icl_section += f"Key Defect: {example['ContrastElement']}\n"
     return icl_section
 
 def call_ollama(prompt):
@@ -41,7 +40,7 @@ def call_ollama(prompt):
     payload = {
         "model": OLLAMA_MODEL_NAME,
         "prompt": prompt,
-        "stream": False, # Set to True for streaming response
+        "stream": False,
         "options": {
             "temperature": 0.1, # Lower temperature for less creativity, more deterministic output
             "top_k": 40,
@@ -70,9 +69,10 @@ def generate_LLM_descriptions():
 
 
     icl_prompt_section = create_icl_prompt_section(in_context_train)
-
     print(f"Starting LLM explanation generation for {len(test_set_images)} images...")
+    
     generated_explanations = []
+    
     with open(OUTPUT_LLM_EXPLANATIONS_FILE, 'w') as outfile:
         for i, item in enumerate(test_set_images):
             Filename = item["Filename"]
@@ -81,17 +81,15 @@ def generate_LLM_descriptions():
 
             # Construct the full prompt for the current image
             current_image_prompt = (
-                f"{SYSTEM_PROMPT}\n\n"
-                f"{icl_prompt_section}"
-                f"Now, explain if the biometrics is compliant. Your response should always start with an overall compliance assessment. Then, detail any specific defects, referencing the relevant OFIQ scalar scores. Conclude with clear, actionable recommendations for improvement. Keep it short and concise\n\n"
-                f"Filename: {Filename}\n"
-                f"OFIQ Scores: {json.dumps(OFIQResults)}\n"
-                f"Explanation:"
+                f"{SYSTEM_PROMPT}\n\n" # Prompt
+                f"{icl_prompt_section}" # Training examples
+                f" Now evaluate and describe the following image \n\n"
+                f"Filename: {Filename}\n" # Current image filename
+                f"OFIQ Scores: {json.dumps(OFIQResults)}\n" # Current image OFIQ results
             )
-
             print(f"Processing image {i+1}/{len(test_set_images)}: {os.path.basename(Filename)}")
+            
             llm_response = call_ollama(current_image_prompt)
-
             if llm_response:
                 result_entry = {
                     "Filename": Filename,

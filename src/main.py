@@ -1,3 +1,0 @@
-from src.in_context_LLM import generate_LLM_descriptions
-
-generate_LLM_descriptions()
