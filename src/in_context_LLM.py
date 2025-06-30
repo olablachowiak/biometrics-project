@@ -6,13 +6,13 @@ import os
 # --- Configuration ---
 IN_CONTEXT_TEST_FILE = "data/QFIQ_assessment/in_context_test_data.jsonl"
 IN_CONTEXT_TRAIN_FILE = "data/QFIQ_assessment/in_context_train1.jsonl"
-OUTPUT_LLM_EXPLANATIONS_FILE = "data/llm_descriptions/llm_generated_explanations.jsonl" # Output for LLM results
+OUTPUT_LLM_EXPLANATIONS_FILE = "data/llm_descriptions/llm_generated_explanations7.jsonl" # Output for LLM results
 OLLAMA_API_URL = "http://localhost:11434/api/generate" # Default Ollama API endpoint
 OLLAMA_MODEL_NAME = "llama3.2"
 SYSTEM_PROMPT = """You are an AI assistant specialized in explaining face image quality defects based on OFIQ (Open Source Face Image Quality) assessment.
 For each image, carefully review all OFIQ scores and select defect specific to that image. Do not assume the same defect for all images; each image may have a different primary defect.
-One defect might be a combination of multiple OFIQ scores.
-Always start by stating if the image is compliant or not. Then provide a concise desription of the defect and actionable feedback for improvement.
+One defect might be a combination of multiple OFIQ scores. Only mention the scores that are the correlated with the defect.
+Always start by stating if the image is compliant or not. Then provide a concise desription of the defect and actionable feedback for improvement. 
 If no significant defects are identified, state that the image is fully compliant and no specific defects were found.
 Your response should be concise, professional, and easy to understand. Each image has at maximum one main defect."""
 
@@ -30,8 +30,8 @@ def create_icl_prompt_section(in_context_train):
     icl_section = ""
     for i, example in enumerate(in_context_train):
         icl_section += f"OFIQ Scores: {json.dumps(example['OFIQResults'])}\n"
-        icl_section += f"Primary Defect Type: {example['ContrastElement']}\n"
-        icl_section += f"Correct Description: {example['Description']}\n\n"
+        icl_section += f"Defect type: {example['ContrastElement']}\n"
+        icl_section += f"Description: {example['Description']}\n\n"
     return icl_section
 
 def call_ollama(prompt):
@@ -83,8 +83,7 @@ def generate_LLM_descriptions():
             current_image_prompt = (
                 f"{SYSTEM_PROMPT}\n\n" # Prompt
                 f"{icl_prompt_section}" # Training examples
-                f" Now evaluate and describe the following image \n\n"
-                f"Filename: {Filename}\n" # Current image filename
+                f" Now explain if the image is complaint or not complaint for biometrics. Remember to provide Actionable Feedback. Use the provided above examples to guide your judgment and format of the Description: \n\n"
                 f"OFIQ Scores: {json.dumps(OFIQResults)}\n" # Current image OFIQ results
             )
             print(f"Processing image {i+1}/{len(test_set_images)}: {os.path.basename(Filename)}")
