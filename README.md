@@ -4,7 +4,7 @@ This is a project to describe quality issues in biometric images based on the
 OFIQ assessment (Open Source Face Image Quality). This project uses Llama 3.2
 to create a human-readable description of the quality issues in biometric
 images. The step-by-step analysis may be found in the Jupyter notebook
-`analysis.ipynb`.
+[`analysis.ipynb`](./analysis.ipynb).
 
 ## Setup
 
