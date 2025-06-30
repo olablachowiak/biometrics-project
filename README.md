@@ -1,6 +1,10 @@
 # Biometrics project
 
-This is a project to describe quality issues in biometric images. This project uses Llama 3.2 to create a human-readable description of the quality issues in biometric images.
+This is a project to describe quality issues in biometric images based on the
+OFIQ assessment (Open Source Face Image Quality). This project uses Llama 3.2
+to create a human-readable description of the quality issues in biometric
+images. The step-by-step analysis may be found in the Jupyter notebook
+`analysis.ipynb`.
 
 ## Setup
 
@@ -13,11 +17,30 @@ python3 -m venv .venv
 source .venv/bin/activate
 ```
 
+You will also need to have Ollama available on a network endpoint for remote
+LLM inference.
+
 ## Correlation analysis
 
 Below you can find a screenshot of the correlation analyisis of the OFIQ scores.
 
 ![Correlation analysis](./correlation_analysis.png)
+
+## System prompt
+
+```txt
+You are an AI assistant specialized in explaining face image quality defects
+based on OFIQ (Open Source Face Image Quality) assessment. For each image,
+carefully review all OFIQ scores and select defect specific to that image.
+Do not assume the same defect for all images; each image may have a different
+primary defect. One defect might be a combination of multiple OFIQ scores. Only
+mention the scores that are the correlated with the defect. Always start by
+stating if the image is compliant or not. Then provide a concise desription of
+the defect and actionable feedback for improvement. If no significant defects
+are identified, state that the image is fully compliant and no specific defects
+were found. Your response should be concise, professional, and easy to
+understand. Each image has at maximum one main defect.
+```
 
 ## Evaluation
 
